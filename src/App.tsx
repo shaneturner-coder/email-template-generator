@@ -1,10 +1,58 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import './App.css'
+import LoginScreen from './LoginScreen'
+import { envError, supabase } from './supabaseClient'
 import { SAMPLE_TEMPLATES } from './sampleTemplates'
 import { extractVariables, renderSegments, renderToText } from './templateUtils'
 import { CATEGORIES, type Category, type Template } from './types'
 
 function App() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!supabase) return
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setLoading(false)
+    })
+    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession)
+    })
+    return () => data.subscription.unsubscribe()
+  }, [])
+
+  if (envError) return <ConfigErrorScreen message={envError} />
+  if (loading) return null
+  if (!session) return <LoginScreen />
+
+  return (
+    <>
+      <header className="app-bar">
+        <span className="app-bar-title">Email Template Generator</span>
+        <span className="app-bar-email">{session.user.email ?? 'Signed in'}</span>
+        <button className="btn btn-ghost" onClick={() => supabase?.auth.signOut()}>
+          Sign out
+        </button>
+      </header>
+      <TemplateApp />
+    </>
+  )
+}
+
+function ConfigErrorScreen({ message }: { message: string }) {
+  return (
+    <div className="login-screen">
+      <div className="card login-card">
+        <h1>Configuration error</h1>
+        <p className="login-error">{message}</p>
+      </div>
+    </div>
+  )
+}
+
+function TemplateApp() {
   const [templates, setTemplates] = useState<Template[]>(SAMPLE_TEMPLATES)
 
   // Add-template form

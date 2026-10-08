@@ -1,3 +1,60 @@
+/* Signed-in header bar */
+
+.app-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1.5rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e4e9ef;
+}
+
+.app-bar-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1f2933;
+}
+
+.app-bar-email {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: #52606d;
+}
+
+/* Login / error screens */
+
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.login-card {
+  width: min(24rem, 100%);
+  text-align: center;
+  padding: 2rem 1.75rem;
+}
+
+.login-card h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+}
+
+.login-tagline {
+  margin: 0 0 1.5rem;
+  color: #52606d;
+  font-size: 0.92rem;
+}
+
+.login-error {
+  margin: 1rem 0 0;
+  color: #c81e1e;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
 .page {
   max-width: 60rem;
   margin: 0 auto;
