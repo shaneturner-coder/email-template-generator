@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import './App.css'
 import LoginScreen from './LoginScreen'
 import { envError, supabase } from './supabaseClient'
@@ -36,7 +36,7 @@ function App() {
           Sign out
         </button>
       </header>
-      <TemplateApp />
+      {supabase && <TemplateApp client={supabase} />}
     </>
   )
 }
@@ -52,8 +52,22 @@ function ConfigErrorScreen({ message }: { message: string }) {
   )
 }
 
-function TemplateApp() {
-  const [templates, setTemplates] = useState<Template[]>(SAMPLE_TEMPLATES)
+type TemplateRow = {
+  id: string
+  title: string
+  category: string
+  body: string
+  created_at: string
+}
+
+function rowToTemplate(row: TemplateRow): Template {
+  return { id: row.id, title: row.title, category: row.category as Category, body: row.body }
+}
+
+function TemplateApp({ client }: { client: SupabaseClient }) {
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // Add-template form
   const [title, setTitle] = useState('')
@@ -78,16 +92,67 @@ function TemplateApp() {
 
   const blankCount = activeVariables.filter((name) => !(values[name] ?? '').trim()).length
 
-  function addTemplate(event: React.FormEvent) {
+  async function fetchTemplates() {
+    const { data, error: selectError } = await client
+      .from('templates')
+      .select('id, title, category, body, created_at')
+      .order('created_at', { ascending: true })
+    if (selectError) throw new Error(selectError.message)
+    return (data ?? []) as TemplateRow[]
+  }
+
+  async function loadTemplates() {
+    setLoading(true)
+    setError(null)
+    try {
+      let rows = await fetchTemplates()
+      // First sign-in: seed the fake sample templates for this user (idempotent).
+      if (rows.length === 0) {
+        const { error: seedError } = await client
+          .from('templates')
+          .upsert(SAMPLE_TEMPLATES.map(({ id, title: t, category: c, body: b }) => ({ id, title: t, category: c, body: b })))
+        if (seedError) throw new Error(seedError.message)
+        rows = await fetchTemplates()
+      }
+      setTemplates(rows.map(rowToTemplate))
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : String(loadError))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadTemplates()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function addTemplate(event: React.FormEvent) {
     event.preventDefault()
     if (!title.trim() || !body.trim()) return
-    setTemplates((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), title: title.trim(), category, body },
-    ])
+    setError(null)
+    const { error: insertError } = await client
+      .from('templates')
+      .insert({ title: title.trim(), category, body })
+    if (insertError) {
+      setError(insertError.message)
+      return
+    }
     setTitle('')
     setCategory('General')
     setBody('')
+    await loadTemplates()
+  }
+
+  async function deleteTemplate(id: string) {
+    setError(null)
+    const { error: deleteError } = await client.from('templates').delete().eq('id', id)
+    if (deleteError) {
+      setError(deleteError.message)
+      return
+    }
+    if (id === activeId) closePanel()
+    await loadTemplates()
   }
 
   function openPanel(template: Template) {
@@ -121,6 +186,8 @@ function TemplateApp() {
           copy the finished email.
         </p>
       </header>
+
+      {error && <p className="error-banner">{error}</p>}
 
       <section className="card">
         <h2>Add a template</h2>
@@ -167,7 +234,9 @@ function TemplateApp() {
 
       <section className="card">
         <h2>Templates ({templates.length})</h2>
-        {templates.length === 0 ? (
+        {loading ? (
+          <p className="empty-state">Loading templates…</p>
+        ) : templates.length === 0 ? (
           <p className="empty-state">No templates yet — add one above.</p>
         ) : (
           <table className="template-table">
@@ -190,6 +259,9 @@ function TemplateApp() {
                   <td className="cell-action">
                     <button className="btn" onClick={() => openPanel(t)}>
                       Use
+                    </button>{' '}
+                    <button className="btn btn-danger" onClick={() => deleteTemplate(t.id)}>
+                      Delete
                     </button>
                   </td>
                 </tr>
