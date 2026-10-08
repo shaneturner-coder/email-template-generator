@@ -72,10 +72,11 @@ function TemplateApp({ client }: { client: SupabaseClient }) {
   // (StrictMode double-invokes the load effect in dev).
   const seedStartedRef = useRef(false)
 
-  // Add-template form
+  // Add/edit-template form (editingId set ⇒ edit mode)
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState<Category>('General')
   const [body, setBody] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   // Generator panel
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -132,20 +133,43 @@ function TemplateApp({ client }: { client: SupabaseClient }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function addTemplate(event: React.FormEvent) {
-    event.preventDefault()
-    if (!title.trim() || !body.trim()) return
-    setError(null)
-    const { error: insertError } = await client
-      .from('templates')
-      .insert({ title: title.trim(), category, body })
-    if (insertError) {
-      setError(insertError.message)
-      return
-    }
+  function resetForm() {
     setTitle('')
     setCategory('General')
     setBody('')
+    setEditingId(null)
+  }
+
+  function startEdit(template: Template) {
+    setEditingId(template.id)
+    setTitle(template.title)
+    setCategory(template.category)
+    setBody(template.body)
+  }
+
+  async function submitTemplate(event: React.FormEvent) {
+    event.preventDefault()
+    if (!title.trim() || !body.trim()) return
+    setError(null)
+    if (editingId) {
+      const { error: updateError } = await client
+        .from('templates')
+        .update({ title: title.trim(), category, body })
+        .eq('id', editingId)
+      if (updateError) {
+        setError(updateError.message)
+        return
+      }
+    } else {
+      const { error: insertError } = await client
+        .from('templates')
+        .insert({ title: title.trim(), category, body })
+      if (insertError) {
+        setError(insertError.message)
+        return
+      }
+    }
+    resetForm()
     await loadTemplates()
   }
 
@@ -195,8 +219,8 @@ function TemplateApp({ client }: { client: SupabaseClient }) {
       {error && <p className="error-banner">{error}</p>}
 
       <section className="card">
-        <h2>Add a template</h2>
-        <form onSubmit={addTemplate} className="template-form">
+        <h2>{editingId ? 'Edit template' : 'Add a template'}</h2>
+        <form onSubmit={submitTemplate} className="template-form">
           <label className="field">
             Title
             <input
@@ -231,8 +255,13 @@ function TemplateApp({ client }: { client: SupabaseClient }) {
               ? `${extractVariables(body).length} variable(s) detected`
               : 'Use {{double braces}} for variables, e.g. {{Agent Full Name}}.'}
           </div>
+          {editingId && (
+            <button type="button" className="btn" onClick={resetForm}>
+              Cancel
+            </button>
+          )}
           <button type="submit" className="btn btn-primary">
-            Add template
+            {editingId ? 'Save changes' : 'Add template'}
           </button>
         </form>
       </section>
@@ -264,6 +293,9 @@ function TemplateApp({ client }: { client: SupabaseClient }) {
                   <td className="cell-action">
                     <button className="btn" onClick={() => openPanel(t)}>
                       Use
+                    </button>{' '}
+                    <button className="btn" onClick={() => startEdit(t)}>
+                      Edit
                     </button>{' '}
                     <button className="btn btn-danger" onClick={() => deleteTemplate(t.id)}>
                       Delete
