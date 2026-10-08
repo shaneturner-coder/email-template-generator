@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import './App.css'
 import LoginScreen from './LoginScreen'
@@ -68,6 +68,9 @@ function TemplateApp({ client }: { client: SupabaseClient }) {
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Guards the check-then-insert seed window against concurrent runs
+  // (StrictMode double-invokes the load effect in dev).
+  const seedStartedRef = useRef(false)
 
   // Add-template form
   const [title, setTitle] = useState('')
@@ -107,9 +110,13 @@ function TemplateApp({ client }: { client: SupabaseClient }) {
     try {
       let rows = await fetchTemplates()
       // First sign-in: seed the fake sample templates for this user (ids from the DB).
-      if (rows.length === 0) {
+      if (rows.length === 0 && !seedStartedRef.current) {
+        seedStartedRef.current = true
         const { error: seedError } = await client.from('templates').insert(SAMPLE_TEMPLATES)
-        if (seedError) throw new Error(seedError.message)
+        if (seedError) {
+          seedStartedRef.current = false // allow a retry on the next load
+          throw new Error(seedError.message)
+        }
         rows = await fetchTemplates()
       }
       setTemplates(rows.map(rowToTemplate))
