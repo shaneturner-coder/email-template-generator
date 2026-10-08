@@ -1,32 +1,32 @@
-# React + TypeScript + Vite
+# Email Template Generator
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A team tool that stores reusable email templates with `{{variables}}` and generates finished
+emails from them. Built for eXp's AI Builder Green Belt.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Google sign-in (Supabase Auth)
+- Add, edit, and delete templates
+- Automatic `{{variable}}` detection
+- Generator with live preview, blank-field highlighting, and one-click copy
+- Per-user data via Row Level Security
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+React + Vite + TypeScript, Supabase (Postgres + Auth + RLS), Vercel.
 
-## Expanding the Oxlint configuration
+## Live app
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+https://email-template-generator-amber.vercel.app
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Local setup
+
+```sh
+npm install
+cp .env.example .env   # fill in VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Database schema lives in [supabase/schema.sql](supabase/schema.sql).
+
+> **Note:** test/sample data only — no real names, agents, or employee data.
