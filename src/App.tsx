@@ -106,11 +106,9 @@ function TemplateApp({ client }: { client: SupabaseClient }) {
     setError(null)
     try {
       let rows = await fetchTemplates()
-      // First sign-in: seed the fake sample templates for this user (idempotent).
+      // First sign-in: seed the fake sample templates for this user (ids from the DB).
       if (rows.length === 0) {
-        const { error: seedError } = await client
-          .from('templates')
-          .upsert(SAMPLE_TEMPLATES.map(({ id, title: t, category: c, body: b }) => ({ id, title: t, category: c, body: b })))
+        const { error: seedError } = await client.from('templates').insert(SAMPLE_TEMPLATES)
         if (seedError) throw new Error(seedError.message)
         rows = await fetchTemplates()
       }

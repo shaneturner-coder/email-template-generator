@@ -1,10 +1,11 @@
 import type { Template } from './types'
 
 // Obviously fake seed data — no real agents or teams.
-// Fixed UUIDs + upsert make first-run seeding idempotent.
-export const SAMPLE_TEMPLATES: Template[] = [
+// No ids here: the DB generates them so each user's seed rows are their own.
+export type SampleTemplate = Omit<Template, 'id'>
+
+export const SAMPLE_TEMPLATES: SampleTemplate[] = [
   {
-    id: 'e0000000-0000-4000-8000-000000000001',
     title: 'Sample Team Release',
     category: 'Team Release',
     body: `Hi {{Agent Full Name}},
@@ -16,7 +17,6 @@ No action is needed on your side. Reply to this email if you see any discrepancy
 — Sample Records Desk (not a real team)`,
   },
   {
-    id: 'e0000000-0000-4000-8000-000000000002',
     title: 'Sample Compensation Split Release',
     category: 'Compensation Split Release',
     body: `Hi {{Agent Full Name}},
@@ -28,7 +28,6 @@ This is sample data for testing the generator — amounts shown in the real tool
 — Sample Payroll Bot (not a real sender)`,
   },
   {
-    id: 'e0000000-0000-4000-8000-000000000003',
     title: 'Sample General Check-In',
     category: 'General',
     body: `Hi {{Agent Full Name}},
